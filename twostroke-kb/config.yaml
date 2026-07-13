@@ -1,0 +1,40 @@
+# ============================================================
+# TwoStrokeGPT  |  central config
+# ============================================================
+# This file declares structure and defaults.
+# Actual secrets/values live in .env — one change there
+# propagates to all LLM calls without any code changes.
+# ============================================================
+
+llm:
+  provider: "local"          # "local"/"ollama"/"vllm" (OpenAI-compat endpoint) or "anthropic"
+  base_url_env: "LLM_BASE_URL"
+  model_env:    "LLM_MODEL"
+  api_key_env:  "LLM_API_KEY"
+  temperature:  0.1
+  max_tokens:   4096
+  no_think:     true          # strip <think>…</think> blocks from Qwen3 reasoning output
+
+vision:
+  model_env:    "LLM_VISION_MODEL"   # if unset in .env, falls back to llm.model_env value
+
+embeddings:
+  model_env:    "EMBEDDING_MODEL"
+  dim_env:      "EMBEDDING_DIM"
+  default_model: "intfloat/multilingual-e5-small"
+  default_dim:   384
+
+retrieval:
+  top_k:      20
+  rerank_k:   5
+
+ingestion:
+  chunk_size:    700
+  chunk_overlap: 100
+  dedup_threshold: 0.98
+  ocr_langs: "deu+eng"
+  upload_dir: "./data/uploads"
+
+app:
+  host: "0.0.0.0"
+  port: 8000

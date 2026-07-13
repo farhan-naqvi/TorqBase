@@ -1,0 +1,14 @@
+[project]
+name = "twostroke-kb"
+version = "0.1.0"
+description = "AI-powered two-stroke engine knowledge platform (Hirth challenge)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

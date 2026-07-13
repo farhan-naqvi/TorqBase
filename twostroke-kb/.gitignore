@@ -1,0 +1,23 @@
+# secrets — never commit
+.env
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# virtual environment
+.venv/
+
+# uploaded data (not tracked)
+data/
+
+# editor / OS
+.DS_Store
+*.swp
+Thumbs.db
+.env
+*.pid
+*.log

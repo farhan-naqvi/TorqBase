@@ -1,0 +1,19 @@
+Sample Corpus/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Python/runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Local app data and logs
+*.log
+*.pid
+.tmp/
+twostroke-kb/data/
+twostroke-kb/.env
+twostroke-kb/cloudflared

@@ -1,0 +1,4 @@
+Parameter,Value [rpm],Torque [Nm],Temperature [deg C]
+Idle,800,5.2,60
+Max Power,6500,12.8,90
+Max Torque,5000,15.1,85

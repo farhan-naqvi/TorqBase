@@ -1,0 +1,109 @@
+flowchart TD
+    U["User uploads knowledge files<br/>.pdf · scanned .pdf · images · .docx · .doc · .xlsx · .csv · .pptx · .url"] --> RT
+
+    %% ===== GRAPH 1 — format-aware ingestion pipeline (LangGraph) =====
+    subgraph G1["GRAPH 1: LangGraph Ingestion Pipeline (format-aware)"]
+        RT{"Format router + language detect (DE/EN)<br/>format_router.py"}
+
+        H1["Digital PDF to text + layout<br/>pdf_parser.py · PyMuPDF"]
+        H2["Scanned PDF / images to OCR de+en<br/>ocr.py · Tesseract"]
+        H3["DOCX to text + tables<br/>docx_parser.py"]
+        H4["Legacy DOC: convert then parse<br/>doc_convert.py · LibreOffice/antiword"]
+        H5["XLSX / CSV table-aware<br/>rows · cols · units · formulas<br/>sheet_parser.py"]
+        H6["PPTX to slide text + notes<br/>pptx_parser.py"]
+        H7["URL / shortcut: extract link only, no fetch<br/>link_handler.py"]
+
+        N["Normalize to clean text + tables + metadata<br/>corpus_builder.py"]
+        D["Chunk prose · keep tables intact<br/>chunker.py"]
+        E["Extract tags + entities de/en<br/>domain_enricher.py"]
+        F["Extract relationships<br/>graph_builder.py"]
+        EMB["Embed multilingual<br/>knowledge_base.py"]
+        DEDUP["Dedup at ingest · cosine > 0.98<br/>merge provenance, keep all source refs<br/>dedup.py"]
+
+        RT -->|PDF text| H1
+        RT -->|scanned/img| H2
+        RT -->|docx| H3
+        RT -->|doc legacy| H4
+        RT -->|xlsx/csv| H5
+        RT -->|pptx| H6
+        RT -->|url| H7
+        H1 --> N
+        H2 --> N
+        H3 --> N
+        H4 --> N
+        H5 --> N
+        H6 --> N
+        N --> D --> E --> F --> EMB --> DEDUP
+    end
+
+    %% ===== stores =====
+    H1 -. raw file .-> S1
+    H5 -. structured rows .-> S6
+    H7 -. link reference .-> S4
+    N -. clean text .-> S2
+    DEDUP -. vectors .-> S3
+    E -. metadata .-> S4
+    F -. relationships .-> S5
+
+    S1[("Raw file storage<br/>Supabase object store")]
+    S2[("Clean corpus<br/>text + table metadata")]
+    S3[("Vector DB<br/>pgvector")]
+    S4[("Metadata DB<br/>PostgreSQL · tags · links")]
+    S5[("Knowledge graph<br/>Engine·Part·Symptom·Cause·Fix")]
+    S6[("Structured facts<br/>specs · fuel data · calc tables")]
+
+    %% ===== GRAPH 2 — ReAct diagnostic agent =====
+    Q["User asks question or starts diagnosis<br/>EN / DE"] --> G2
+    subgraph G2["GRAPH 2: ReAct Diagnostic Agent"]
+        R1["Reason: query · model · symptom · intent"]
+        R2["Choose tool"]
+        R3["Act: run tool"]
+        R4["Observe evidence"]
+        R5["Draft answer + citations + confidence"]
+        R6["Grounding verifier: claims vs sources"]
+        R1 --> R2 --> R3 --> R4 --> R1
+        R1 --> R5 --> R6
+        R6 -->|unsupported or incomplete| R1
+        R6 -->|grounded| OUT["Final cited answer (user's language)"]
+    end
+
+    TOOLS["Tool layer<br/>hybrid_search · graph_lookup · spec_lookup · conflict_check · unit_convert · diagnostic_tree · source_viewer"]
+    RR["Re-rank: top-20 to top-5<br/>cross-encoder · reranker.py"]
+    S2 --> TOOLS
+    S3 --> TOOLS
+    S4 --> TOOLS
+    S5 --> TOOLS
+    S6 --> TOOLS
+    TOOLS -->|top-20 candidates| RR
+    RR -->|top-5| R3
+
+    OUT --> REC["Recommend: related questions<br/>+ graph neighbours · recommender.py"]
+    S5 -. neighbours .-> REC
+    REC --> UI["Web UI<br/>Upload · Chat · Search · Graph · Diagnose · Gaps · Feedback<br/>(token streaming · live upload progress)"]
+    OUT --> UI
+    UI --> FB["Feedback<br/>thumbs · correction · expert note"]
+    FB --> M[("Memory + review store<br/>conversation · profile · approved corrections")]
+    M -. reweights retrieval .-> RR
+    R6 --> GAP["Gap detector<br/>missing specs · procedure · weak evidence"]
+    GAP --> GL[("Knowledge gaps log")]
+    GL --> UI
+
+    LLM["LLM<br/>Hosted API or local Ollama (offline)"] -. used by .-> E
+    LLM -. used by .-> R1
+    LLM -. used by .-> R6
+
+    %% ===== STRETCH / phase 2 — figure & diagram intelligence (added at the end) =====
+    FIG["Figure handler — STRETCH / phase 2<br/>extract figures · vision-caption · OCR callouts<br/>figure_handler.py"]
+    S7[("Figure store<br/>extracted diagram images")]
+    H1 -. figures .-> FIG
+    H2 -. figures .-> FIG
+    FIG -. caption text .-> D
+    FIG -. callouts to parts .-> F
+    FIG -. images .-> S7
+    S7 --> TOOLS
+    LLM -. vision-caption .-> FIG
+
+    classDef stretch stroke:#b45309,fill:#fef3e2,stroke-dasharray:5 4;
+    class FIG,S7 stretch;
+
+    %% Roadmap (phase 2): document versioning — same filename → delete old vectors by doc_id → re-ingest
